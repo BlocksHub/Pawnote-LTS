@@ -1,3 +1,8 @@
+> [!WARNING]
+> This repository is a fork of the archived [Pawnote](https://code.vexcited.com/archive/pawnote1.6.2) repository.
+> 
+> We only maintain this fork for bugfixes and security updates. No new features will be added.
+
 <img alt="Pawnote: A purrfect API wrapper for PRONOTE" src=".github/assets/banner.svg" width="100%" />
 
 _This library **is not** affiliated with [Index-Education](https://www.index-education.com/) or [PRONOTE](https://www.index-education.com/fr/logiciel-gestion-vie-scolaire.php) in any way._
