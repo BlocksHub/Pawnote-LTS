@@ -1,10 +1,10 @@
 {
-  "name": "pawnote",
-  "version": "1.6.2",
+  "name": "@blockshub/pawnote-lts",
+  "version": "1.6.3",
   "description": "A purrfect API wrapper for PRONOTE.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LiterateInk/Pawnote.js.git"
+    "url": "git+https://github.com/BlocksHub/Pawnote-LTS.git"
   },
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -31,11 +31,7 @@
     "wrapper",
     "api"
   ],
-  "author": "LiterateInk <contact@literate.ink> (https://literate.ink)",
-  "homepage": "https://pawnote.docs.literate.ink/",
-  "bugs": {
-    "url": "https://github.com/LiterateInk/Pawnote.js/issues"
-  },
+  "author": "Papillon Team <contact@papillon.bzh> (https://papillon.bzh)",
   "license": "GPL-3.0-or-later",
   "devDependencies": {
     "@inquirer/prompts": "^4.3.3",
