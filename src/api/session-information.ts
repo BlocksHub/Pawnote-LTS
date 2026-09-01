@@ -29,14 +29,46 @@ export const sessionInformation = async (options: {
     // Remove all spaces and line breaks.
     const body_cleaned = html.replace(/ /ug, "").replace(/\n/ug, "");
 
-    // Find the relaxed JSON of the session.
-    const from = "Start(";
-    const to = ")}catch";
+    // Find the relaxed JSON of the session, given as the only argument
+    // of the `Start(...)` call inside the page's inline script.
+    const from = "Start({";
+    const start = body_cleaned.indexOf(from);
+    if (start === -1) throw new Error("unable to locate the `Start({` marker in the page");
 
-    const relaxed_data = body_cleaned.substring(
-      body_cleaned.indexOf(from) + from.length,
-      body_cleaned.indexOf(to)
-    );
+    // Walk the object to find its matching closing brace, since the
+    // characters following the call vary between PRONOTE versions.
+    const opening = start + from.length - 1;
+    let depth = 0;
+    let inString = false;
+    let quote = "";
+    let end = -1;
+
+    for (let index = opening; index < body_cleaned.length; index++) {
+      const character = body_cleaned[index];
+
+      if (inString) {
+        if (character === "\\") index++;
+        else if (character === quote) inString = false;
+        continue;
+      }
+
+      if (character === "\"" || character === "'") {
+        inString = true;
+        quote = character;
+      }
+      else if (character === "{") depth++;
+      else if (character === "}") {
+        depth--;
+
+        if (depth === 0) {
+          end = index + 1;
+          break;
+        }
+      }
+    }
+
+    if (end === -1) throw new Error("unable to find the end of the session object in the page");
+    const relaxed_data = body_cleaned.substring(opening, end);
 
     // Convert the relaxed JSON to something we can parse.
     const session_data_string = relaxed_data

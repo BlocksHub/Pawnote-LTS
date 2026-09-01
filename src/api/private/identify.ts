@@ -11,6 +11,7 @@ export const identify = async (session: SessionHandle, parameters: {
 
   username: string
   deviceUUID: string
+  loginTokenSAV?: string
 }): Promise<any> => {
   const properties = apiProperties(session);
 
@@ -26,7 +27,7 @@ export const identify = async (session: SessionHandle, parameters: {
       demandeConnexionAppliMobile: parameters.requestFirstMobileAuthentication,
       demandeConnexionAppliMobileJeton: parameters.requestFromQRCode,
       uuidAppliMobile: parameters.deviceUUID,
-      loginTokenSAV: "",
+      loginTokenSAV: parameters.loginTokenSAV ?? "",
 
       // Let's keep values coherent with our `User-Agent` header value.
       informationsAppareil: {

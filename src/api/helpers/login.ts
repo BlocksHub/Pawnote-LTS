@@ -96,6 +96,7 @@ export const loginToken = async (session: SessionHandle, auth: TokenAuthenticati
   const identity = await identify(session, {
     username: auth.username,
     deviceUUID: auth.deviceUUID,
+    loginTokenSAV: auth.token,
 
     requestFirstMobileAuthentication: false,
     reuseMobileAuthentication: true,
@@ -229,7 +230,7 @@ const transformCredentials = (auth: { username: string, token?: string, password
     auth.username = auth.username.toLowerCase();
   }
 
-  if (identity.modeCompMdp === 1) {
+  if (identity.modeCompMdp === 1 && modProperty === "password") {
     auth[modProperty] = auth[modProperty]!.toLowerCase();
   }
 };
