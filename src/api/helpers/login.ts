@@ -1,14 +1,22 @@
-import { type RefreshInformation, type SessionHandle, BadCredentialsError, SecurityError, type PasswordAuthenticationParams, type TokenAuthenticationParams, InstanceParameters } from "~/models";
-import { sessionInformation } from "../session-information";
-import { instanceParameters } from "../private/instance-parameters";
-import { cleanURL } from "./clean-url";
-import { identify } from "../private/identify";
+import {
+  BadCredentialsError,
+  InstanceParameters,
+  type PasswordAuthenticationParams,
+  type RefreshInformation,
+  SecurityError,
+  type SessionHandle,
+  type TokenAuthenticationParams
+} from "~/models";
+import {sessionInformation} from "../session-information";
+import {instanceParameters} from "../private/instance-parameters";
+import {cleanURL} from "./clean-url";
+import {identify} from "../private/identify";
 import forge from "node-forge";
-import { AES } from "../private/aes";
-import { authenticate } from "../private/authenticate";
-import { userParameters } from "../private/user-parameters";
-import { decodeAuthenticationQr } from "~/decoders/authentication-qr";
-import { use } from "./use";
+import {AES} from "../private/aes";
+import {authenticate} from "../private/authenticate";
+import {userParameters} from "../private/user-parameters";
+import {decodeAuthenticationQr} from "~/decoders/authentication-qr";
+import {use} from "./use";
 
 /**
  * base parameters for `sessionInformation` call.
@@ -55,11 +63,10 @@ export const loginCredentials = async (session: SessionHandle, auth: PasswordAut
     useCAS: false
   });
 
-  transformCredentials(auth, "password", identity);
   const key = createMiddlewareKey(identity, auth.username, auth.password);
+  const solution = solveChallenge(session, identity, key);
 
-  const challenge = solveChallenge(session, identity, key);
-  const authentication = await authenticate(session, challenge);
+  const authentication = await authenticate(session, solution);
   switchToAuthKey(session, authentication, key);
 
   if (hasSecurityModal(authentication)) {
@@ -215,7 +222,7 @@ const createMiddlewareKey = (identity: any, username: string, mod: string): forg
     .toHex()
     .toUpperCase();
 
-  return forge.util.createBuffer(username + hash);
+  return new forge.util.ByteStringBuffer(forge.util.encodeUtf8(username.toLowerCase() + hash));
 };
 
 /**
@@ -230,7 +237,7 @@ const transformCredentials = (auth: { username: string, token?: string, password
     auth.username = auth.username.toLowerCase();
   }
 
-  if (identity.modeCompMdp === 1 && modProperty === "password") {
+  if (identity.modeCompMdp === 1) {
     auth[modProperty] = auth[modProperty]!.toLowerCase();
   }
 };
@@ -245,21 +252,17 @@ const transformCredentials = (auth: { username: string, token?: string, password
  * @throws `BadCredentialsError` if the challenge cannot be solved.
  */
 const solveChallenge = (session: SessionHandle, identity: any, key: forge.util.ByteStringBuffer): string => {
-  const iv = forge.util.createBuffer(session.information.aesIV);
-
   try {
-    const bytes = forge.util.decodeUtf8(AES.decrypt(identity.challenge, key, iv));
+    const iv = forge.util.createBuffer(session.information.aesIV);
+    const challenge = new forge.util.ByteStringBuffer(forge.util.encodeUtf8(identity.challenge));
+    const md5Key = forge.md.md5.create().update(key.bytes()).digest()
+    const md5iv = forge.md.md5.create().update(iv.bytes()).digest()
 
-    // Modify the plain text by removing every second character.
-    const unscrambled = new Array(bytes.length);
-    for (let i = 0; i < bytes.length; i += 1) {
-      if (i % 2 === 0) {
-        unscrambled.push(bytes.charAt(i));
-      }
-    }
-
-    const solution = forge.util.encodeUtf8(unscrambled.join(""));
-    return AES.encrypt(solution, key, iv);
+    const crypter = forge.cipher.createCipher("AES-CBC", md5Key);
+    crypter.start({iv: md5iv});
+    crypter.update(challenge)
+    crypter.finish();
+    return crypter.output.toHex();
   }
   catch {
     throw new BadCredentialsError();
@@ -277,9 +280,7 @@ const solveChallenge = (session: SessionHandle, identity: any, key: forge.util.B
 const switchToAuthKey = (session: SessionHandle, authentication: any, key: forge.util.ByteStringBuffer): void => {
   const iv = forge.util.createBuffer(session.information.aesIV);
   const authKeyDecrypted = AES.decrypt(authentication.cle, key, iv);
-  const authKey = authKeyDecrypted.split(",").map((char) => String.fromCharCode(parseInt(char))).join("");
-
-  session.information.aesKey = authKey;
+  session.information.aesKey = authKeyDecrypted.split(",").map((char) => String.fromCharCode(parseInt(char))).join("");
 };
 
 /**
