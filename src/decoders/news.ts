@@ -4,7 +4,8 @@ import { decodeNewsCategory } from "./news-category";
 import { decodeNewsSurvey } from "./news-survey";
 
 export const decodeNews = (news: any, session: SessionHandle): News => {
-  const categories: NewsCategory[] = news.listeCategories.V.map(decodeNewsCategory);
+  // PRONOTE 2026 renamed the categories "natures".
+  const categories: NewsCategory[] = (news.listeCategories ?? news.listeNatures).V.map(decodeNewsCategory);
 
   return {
     categories,
