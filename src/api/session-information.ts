@@ -6,6 +6,21 @@ import { USER_AGENT } from "./private/user-agent";
 
 const VERSION_FROM_HTML_REGEX = />PRONOTE (?<version>\d+\.\d+\.\d+)/;
 
+/**
+ * The error a page that isn't a session page stands for. The suspension and maintenance pages carry
+ * no version number either, so this is checked before the version too.
+ */
+const pageError = (html: string): Error => {
+  if (html.includes("Votre adresse IP est provisoirement suspendue")) {
+    return new SuspendedIPError();
+  }
+  else if (html.includes("Le site est momentanément indisponible")) {
+    return new BusyPageError();
+  }
+
+  return new PageUnavailableError();
+};
+
 export const sessionInformation = async (options: {
   base: string
   kind: AccountKind,
@@ -23,7 +38,7 @@ export const sessionInformation = async (options: {
 
   const { content: html } = await fetcher(request);
   const version = html.match(VERSION_FROM_HTML_REGEX)?.groups?.version?.split(".").map(Number);
-  if (!version) throw new PageUnavailableError();
+  if (!version) throw pageError(html);
 
   try {
     // Remove all spaces and line breaks.
@@ -80,17 +95,7 @@ export const sessionInformation = async (options: {
       version
     };
   }
-  catch (error) {
-    if (html.includes("Votre adresse IP est provisoirement suspendue")) {
-      throw new SuspendedIPError();
-    }
-    else if (html.includes("Le site n'est pas disponible")) {
-      throw new PageUnavailableError();
-    }
-    else if (html.includes("Le site est momentanément indisponible")) {
-      throw new BusyPageError();
-    }
-
-    throw new PageUnavailableError();
+  catch {
+    throw pageError(html);
   }
 };
