@@ -24,6 +24,11 @@ export interface PasswordAuthenticationParams extends BaseAuthenticationParams {
   password: string;
   /** Token should not be present */
   token?: never;
+  /**
+   * Log in through an ENT (CAS): `username` and `password` are then the `e` and `f` values of the
+   * PRONOTE page reached after the ENT login (in its `Start({...})` call), not the user's credentials.
+   */
+  useCAS?: boolean;
 }
 
 /**

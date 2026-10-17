@@ -60,23 +60,31 @@ export const loginCredentials = async (session: SessionHandle, auth: PasswordAut
     requestFirstMobileAuthentication: true,
     reuseMobileAuthentication: false,
     requestFromQRCode: false,
-    useCAS: false
+    useCAS: auth.useCAS ?? false
   });
 
-  const key = createMiddlewareKey(identity, auth.username, auth.password);
+  const key = auth.useCAS
+    ? createCASKey(auth.password)
+    : createMiddlewareKey(identity, auth.username, auth.password);
   const solution = solveChallenge(session, identity, key);
 
   const authentication = await authenticate(session, solution);
   switchToAuthKey(session, authentication, key);
 
+  // Through an ENT, the username sent is the page's opaque `e`: only the `Authentification` response
+  // names the account (`login`, as PRONOTE's own client reads it), and later token logins need that name.
+  const username = auth.useCAS
+    ? authentication.login || identity.login || auth.username
+    : identity.login ?? auth.username;
+
   if (hasSecurityModal(authentication)) {
     return switchToTokenLogin(session, {
       token: authentication.jetonConnexionAppliMobile,
-      username: identity.login ?? auth.username,
+      username,
       deviceUUID: auth.deviceUUID
     });
   }
-  else return finishLoginManually(session, authentication, identity, auth.username);
+  else return finishLoginManually(session, authentication, identity, username);
 };
 
 /**
@@ -223,6 +231,22 @@ const createMiddlewareKey = (identity: any, username: string, mod: string): forg
     .toUpperCase();
 
   return new forge.util.ByteStringBuffer(forge.util.encodeUtf8(username.toLowerCase() + hash));
+};
+
+/**
+ * Creates the key of a login through an ENT (CAS): the SHA-256 of the page's `f` value, alone.
+ *
+ * @param f - The `f` value of the PRONOTE page reached through the ENT.
+ * @returns A buffer containing the key.
+ */
+const createCASKey = (f: string): forge.util.ByteStringBuffer => {
+  const hash = forge.md.sha256.create()
+    .update(forge.util.encodeUtf8(f))
+    .digest()
+    .toHex()
+    .toUpperCase();
+
+  return forge.util.createBuffer(hash);
 };
 
 /**
