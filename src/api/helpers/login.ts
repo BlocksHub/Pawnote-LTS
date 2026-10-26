@@ -80,13 +80,27 @@ export const loginCredentials = async (session: SessionHandle, auth: PasswordAut
 };
 
 /**
+ * Progress callbacks of `loginToken`, called synchronously between requests.
+ * An error thrown by a hook aborts the login.
+ */
+export type LoginTokenHooks = {
+  /** Right before `Identification`, the request that carries the token. */
+  onCredentialSent?: () => void
+  /** Right before `Authentification`: from here the token may be consumed. */
+  onAuthenticationSent?: () => void
+  /** Receives the new token before `ParametresUtilisateur`, which can still fail. */
+  onTokenIssued?: (information: RefreshInformation) => void
+};
+
+/**
  * Logs in using a token.
  *
  * @param session - The current session handle.
  * @param auth - The authentication details including URL, username, token, account kind, device UUID, and optional navigator identifier.
+ * @param [hooks] - Callbacks called between the login requests, see `LoginTokenHooks`.
  * @returns A promise resolving to the refreshed session information.
  */
-export const loginToken = async (session: SessionHandle, auth: TokenAuthenticationParams): Promise<RefreshInformation> => {
+export const loginToken = async (session: SessionHandle, auth: TokenAuthenticationParams, hooks: LoginTokenHooks = {}): Promise<RefreshInformation> => {
   const base = cleanURL(auth.url);
 
   const { information, version } = await sessionInformation({
@@ -100,6 +114,7 @@ export const loginToken = async (session: SessionHandle, auth: TokenAuthenticati
   session.instance = <InstanceParameters>{ version };
   session.instance = await instanceParameters(session, auth.navigatorIdentifier);
 
+  hooks.onCredentialSent?.();
   const identity = await identify(session, {
     username: auth.username,
     deviceUUID: auth.deviceUUID,
@@ -115,12 +130,21 @@ export const loginToken = async (session: SessionHandle, auth: TokenAuthenticati
   const key = createMiddlewareKey(identity, auth.username, auth.token);
 
   const challenge = solveChallenge(session, identity, key);
+  hooks.onAuthenticationSent?.();
   const authentication = await authenticate(session, challenge);
   switchToAuthKey(session, authentication, key);
 
   if (hasSecurityModal(authentication)) {
     throw new SecurityError(authentication, identity, auth.username);
   }
+
+  hooks.onTokenIssued?.({
+    token: authentication.jetonConnexionAppliMobile,
+    username: identity.login ?? auth.username,
+    kind: session.information.accountKind,
+    url: session.information.url,
+    navigatorIdentifier: session.instance.navigatorIdentifier
+  });
 
   return finishLoginManually(session, authentication, identity, auth.username);
 };
