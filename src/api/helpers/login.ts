@@ -279,12 +279,12 @@ const solveChallenge = (session: SessionHandle, identity: any, key: forge.util.B
   try {
     const iv = forge.util.createBuffer(session.information.aesIV);
     const challenge = new forge.util.ByteStringBuffer(forge.util.encodeUtf8(identity.challenge));
-    const md5Key = forge.md.md5.create().update(key.bytes()).digest()
-    const md5iv = forge.md.md5.create().update(iv.bytes()).digest()
+    const md5Key = forge.md.md5.create().update(key.bytes()).digest();
+    const md5iv = forge.md.md5.create().update(iv.bytes()).digest();
 
     const crypter = forge.cipher.createCipher("AES-CBC", md5Key);
     crypter.start({iv: md5iv});
-    crypter.update(challenge)
+    crypter.update(challenge);
     crypter.finish();
     return crypter.output.toHex();
   }
