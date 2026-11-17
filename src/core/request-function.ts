@@ -1,4 +1,4 @@
-import type { SessionHandle } from "~/models";
+import { AccountKind, type SessionHandle } from "~/models";
 import forge from "node-forge";
 import pako from "pako";
 import { AES } from "../api/private/aes";
@@ -27,7 +27,23 @@ export class RequestFN {
      * Data given to the "secure" property.
      */
     public data: any
-  ) {}
+  ) {
+    this.addStudentToSignature();
+  }
+
+  /**
+   * Since PRONOTE 2026, a parent account must tell which student
+   * a request is about, otherwise the server denies access and
+   * closes the session. Same behavior as pronotepy's `ParentClient`.
+   */
+  private addStudentToSignature (): void {
+    if (this.session.information.accountKind !== AccountKind.PARENT || !this.session.userResource) return;
+
+    const signature = this.data?.[apiProperties(this.session).signature];
+    if (!signature || signature.onglet === undefined || signature.membre) return;
+
+    signature.membre = { N: this.session.userResource.id, G: 4 };
+  }
 
   /**
    * Make the order generation, encryption and compression.
