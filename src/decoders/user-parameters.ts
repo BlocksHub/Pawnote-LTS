@@ -2,7 +2,7 @@ import { AccountKind, type SessionHandle, type UserParameters } from "~/models";
 import { decodeUserAuthorizations } from "./user-authorizations";
 import { decodeUserResource } from "./user-resource";
 
-export const decodeUserParameters = (parameters: any, session: SessionHandle): UserParameters => {
+export const decodeUserParameters = (parameters: any, session: SessionHandle, files?: Array<unknown>): UserParameters => {
   let resources: Array<any>;
 
   switch (session.information.accountKind) {
@@ -19,7 +19,7 @@ export const decodeUserParameters = (parameters: any, session: SessionHandle): U
     id: parameters.ressource.N,
     kind: parameters.ressource.G,
     name: parameters.ressource.L,
-    resources: resources.map((resource) => decodeUserResource(resource, session)),
+    resources: resources.map((resource) => decodeUserResource(resource, session, files)),
     authorizations: decodeUserAuthorizations(parameters.autorisations, parameters.listeOnglets)
   };
 };

@@ -20,6 +20,12 @@ import { apiProperties } from "~/api/private/api-properties";
  * @throws `Error` If there is an unknown error.
  */
 export class ResponseFN {
+  /**
+   * The non-secure part of the response, as sent by the server.
+   * For example, the files attached to the response (like the students' photos) are in there.
+   */
+  public nonSecureData: any;
+
   public constructor (
     private readonly session: SessionHandle,
     public data: any
@@ -37,6 +43,7 @@ export class ResponseFN {
         throw new ServerSideError(error);
       }
 
+      this.nonSecureData = response[properties.nonSecureData];
       this.data = response[properties.secureData];
 
       if (!this.session.information.skipEncryption) {
