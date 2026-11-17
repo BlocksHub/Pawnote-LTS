@@ -12,6 +12,7 @@ export const apiProperties = (session: SessionHandle): {
   signature: string;
   orderNumber: string;
   secureData: string;
+  nonSecureData: string;
   session: string;
 
   fileUploadOrderNumber: string
@@ -25,6 +26,7 @@ export const apiProperties = (session: SessionHandle): {
       data: "data",
       orderNumber: "no",
       secureData: "dataSec",
+      nonSecureData: "dataNonSec",
       requestId: "id",
       signature: "Signature",
       session: "session",
@@ -40,6 +42,7 @@ export const apiProperties = (session: SessionHandle): {
   let common = {
     orderNumber: "numeroOrdre",
     secureData: "donneesSec",
+    nonSecureData: "donneesNonSec",
     requestId: "nom",
     session: "session",
 
