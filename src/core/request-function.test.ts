@@ -1,6 +1,7 @@
 import { it, expect, describe, beforeEach } from "bun:test";
 import { RequestFN } from "./request-function";
 import { AccountKind, type SessionHandle } from "~/models";
+import { apiProperties } from "~/api/private/api-properties";
 
 const SESSION_BASE = "https://demo.index-education.net/pronote";
 const SESSION_ID = 1235678;
@@ -120,5 +121,49 @@ describe("RequestFN", () => {
 
     // Now, IV is applied, the data is precalculated with the IV in the constant handle.
     expect(request.data).toBe("fc5edbd03c4b614c467e8da07008071c575b433aeba4d519c7885f567b68356335c998842d1ba65a687e705618f4d1bfc5f9165a46fc84f0c98a21380478bbbad607cca5fc7111388f237487bc6bea120d347e555b9a990c19f096de38bdab01");
+  });
+});
+
+describe("RequestFN for parent accounts", () => {
+  const parent = (studentID?: string): SessionHandle => ({
+    ...handle,
+    information: { ...handle.information, accountKind: AccountKind.PARENT },
+    // @ts-expect-error : we only fill the necessary fields.
+    userResource: studentID ? { id: studentID } : undefined
+  });
+
+  const signatureOf = (session: SessionHandle, data: any) => data[apiProperties(session).signature];
+  const withTab = (session: SessionHandle, extra: object = {}) => ({
+    [apiProperties(session).signature]: { onglet: 88, ...extra }
+  });
+
+  it("should add the selected student as membre", () => {
+    const session = parent("STUDENT_ID");
+    const request = new RequestFN(session, REQUEST_NAME, withTab(session));
+    expect(signatureOf(session, request.data)).toEqual({ onglet: 88, membre: { N: "STUDENT_ID", G: 4 } });
+  });
+
+  it("should not touch student accounts", () => {
+    const session: SessionHandle = { ...parent("STUDENT_ID"), information: handle.information };
+    const request = new RequestFN(session, REQUEST_NAME, withTab(session));
+    expect(signatureOf(session, request.data)).toEqual({ onglet: 88 });
+  });
+
+  it("should not add membre before a student is selected", () => {
+    const session = parent();
+    const request = new RequestFN(session, REQUEST_NAME, withTab(session));
+    expect(signatureOf(session, request.data)).toEqual({ onglet: 88 });
+  });
+
+  it("should keep an existing membre", () => {
+    const session = parent("STUDENT_ID");
+    const request = new RequestFN(session, REQUEST_NAME, withTab(session, { membre: { N: "OTHER", G: 4 } }));
+    expect(signatureOf(session, request.data)).toEqual({ onglet: 88, membre: { N: "OTHER", G: 4 } });
+  });
+
+  it("should not touch requests without a tab", () => {
+    const session = parent("STUDENT_ID");
+    expect(new RequestFN(session, REQUEST_NAME, REQUEST_DATA).data).toEqual(REQUEST_DATA);
+    expect(new RequestFN(session, REQUEST_NAME, undefined).data).toBeUndefined();
   });
 });
